@@ -1,0 +1,179 @@
+/* ヘッダー（タイトルと公開範囲選択） */
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.select-group {
+  display: flex;
+}
+
+.visibility-select {
+  margin-right: 20px;
+  font-size: 16px;
+  border-radius: 5px;
+  border: 1px solid #ccc;
+}
+
+.genre-select {
+  padding: 8px;
+  font-size: 16px;
+  border-radius: 5px;
+  border: 1px solid #ccc;
+}
+
+.question-title {
+  display: flex;
+  justify-content: start;
+}
+
+/* 答えと選択肢を横並びに */
+.answer-group {
+  display: flex;
+  gap: 10px;
+  margin-top: 5px;
+}
+
+.answer-group input {
+  flex: 1;
+  padding: 10px;
+  font-size: 16px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  outline: none;
+}
+
+/* エラー時の赤枠 */
+.error {
+  border: 2px solid red !important;
+}
+
+/* エラーメッセージ */
+.error-text {
+  color: red;
+  font-size: 14px;
+  margin-top: 5px;
+}
+
+/* 基本的なスタイル */
+.container {
+  background: #fff;
+  padding: 30px;
+  border-radius: 10px;
+  box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+  text-align: center;
+  width: 700px;
+  margin: 50px auto;
+}
+
+h1 {
+  font-size: 24px;
+  margin-bottom: 20px;
+}
+
+.form-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.question-set {
+  width: 100%;
+  position: relative;
+  margin-bottom: 15px;
+  padding: 15px;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  background: #f9f9f9;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ×ボタン */
+.delete-btn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background-color: red;
+  color: white;
+  font-size: 14px;
+  border: none;
+  border-radius: 50%;
+  width: 25px;
+  height: 25px;
+  cursor: pointer;
+}
+
+.delete-btn:hover {
+  background-color: darkred;
+}
+
+label {
+  font-size: 16px;
+  text-align: left;
+  display: block;
+  margin-top: 10px;
+  font-weight: bold;
+}
+
+textarea {
+  padding: 12px;
+  font-size: 16px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  margin-bottom: 10px;
+  outline: none;
+}
+
+input {
+  width: 100%;
+  padding: 12px;
+  font-size: 16px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  margin-bottom: 10px;
+  outline: none;
+}
+
+.add-btn {
+  background-color: #6ecf6e;
+  color: white;
+  font-size: 20px;
+  border: none;
+  border-radius: 50%;
+  width: 45px;
+  height: 45px;
+  cursor: pointer;
+  margin: 15px auto;
+}
+
+.create-btn {
+  background-color: #5bc0de;
+  color: white;
+  font-size: 20px;
+  padding: 12px 30px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  margin-top: 15px;
+}
+
+.create-btn:hover {
+  background-color: #31b0d5;
+}
+
+.add-btn:hover {
+  background-color: #5ab85a;
+}
+
+.success-message {
+  background-color: #d4edda;
+  color: #155724;
+  padding: 10px;
+  margin: 10px 0;
+  border-radius: 5px;
+  text-align: center;
+  font-weight: bold;
+}

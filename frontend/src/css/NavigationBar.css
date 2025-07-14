@@ -1,0 +1,112 @@
+/* ナビゲーションバーのスタイル */
+.navbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  z-index: 1000;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: linear-gradient(135deg, #7dcfea, #c4e1ee);
+  border-bottom: 2px solid #ddd;
+  padding: 10px 10px;
+  box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+body {
+  padding-top: 60px;
+}
+
+/* ロゴとアプリ名のスタイル */
+.logo {
+  display: flex;
+  align-items: center;
+}
+
+.logo-img {
+  width: 45px;
+  height: 45px;
+  margin-right: 12px;
+}
+
+.app-name {
+  font-size: 20px;
+  font-weight: bold;
+  color: #333;
+}
+
+/* ナビゲーションリンクのスタイル */
+.nav-links {
+  display: flex;
+  align-items: center;
+}
+
+.nav-links button {
+  background: none;
+  border: none;
+  font-size: 16px;
+  font-weight: 500;
+  margin: 0 16px;
+  cursor: pointer;
+  padding: 8px 12px;
+  border-radius: 6px;
+  transition: background 0.3s ease, color 0.3s ease;
+}
+
+.nav-links button:hover {
+  background: rgba(0, 0, 0, 0.1);
+  color: #7003ff;
+}
+
+/* ユーザーメニューのスタイル */
+.user-menu {
+  position: relative;
+}
+
+.user-name {
+  background: none;
+  border: none;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 8px 12px;
+  border-radius: 6px;
+  transition: background 0.3s ease;
+}
+
+.user-name:hover {
+  background: rgba(0, 0, 0, 0.1);
+  color: #7003ff;
+}
+
+/* ドロップダウンメニューのスタイル */
+.dropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  background: white;
+  border-radius: 8px;
+  border: 1px solid #ddd;
+  box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+  width: 180px;
+  margin-top: 6px;
+  overflow: hidden;
+}
+
+.dropdown button {
+  background: none;
+  border: none;
+  padding: 12px;
+  text-align: left;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 0.3s ease;
+}
+
+.dropdown button:hover {
+  background: #f0f0f0;
+  color: #7003ff;
+}

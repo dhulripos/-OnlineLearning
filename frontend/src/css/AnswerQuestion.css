@@ -1,0 +1,111 @@
+.question-answer-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.question-answer-container {
+  max-width: 1400px;
+  margin: 0 auto;
+  text-align: center;
+  margin-top: 20px;
+  padding: 20px;
+  background-color: #f8f9fa;
+  border-radius: 10px;
+  box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+}
+
+.question-block {
+  margin-bottom: 20px;
+  padding: 20px;
+  background: white;
+  border-radius: 10px;
+  box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.question-text {
+  font-size: 1.5rem;
+  color: #333;
+  margin-bottom: 15px;
+}
+
+.choices {
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+}
+
+.choice-label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  cursor: pointer;
+  padding: 0 20px;
+  border-radius: 5px;
+  background-color: #ffffff;
+  border: 2px solid #007bff;
+  color: #007bff;
+  /* transition: all 0.3s ease-in-out; */
+  min-width: 120px;
+  text-align: center;
+  position: relative;
+}
+
+/* ラジオボタンを非表示 */
+.choice-label input {
+  display: none;
+}
+
+/* ホバー時のスタイル */
+.choice-label:hover {
+  background-color: #007bff;
+  color: white;
+}
+
+/* 選択中のスタイルをホバーと同じにする */
+.choice-label.checked {
+  background-color: #007bff;
+  color: white;
+  border-color: #007bff;
+  box-shadow: 0px 0px 10px rgba(0, 123, 255, 0.5);
+}
+
+/* 選択肢のテキスト */
+.choice-label span {
+  display: block;
+  width: 100%;
+  text-align: center;
+  padding: 10px;
+  border-radius: 5px;
+  transition: background 0.3s ease-in-out, color 0.3s ease-in-out;
+}
+
+/* 回答を提出ボタン */
+.question-answer-submit {
+  display: flex;
+  justify-content: center;
+  margin-top: 20px;
+}
+
+.question-answer-submit-btn {
+  padding: 12px 20px;
+  font-size: 18px;
+  font-weight: bold;
+  color: white;
+  background-color: #28a745;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background 0.3s ease;
+}
+
+.question-answer-submit-btn:hover {
+  background-color: #218838;
+}
+
+.question-answer-submit-btn:disabled {
+  background-color: #6c757d;
+  cursor: not-allowed;
+}

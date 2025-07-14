@@ -1,0 +1,83 @@
+/* 全体背景：グラデーションと中央配置 */
+.login-screen {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  background: linear-gradient(135deg, #f0f4ff, #d9e4ff);
+  margin: 0;
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+}
+
+/* ログインコンテナ：カード風のデザイン */
+.login-container {
+  background: #ffffff;
+  padding: 40px 30px;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  text-align: center;
+  max-width: 400px;
+  width: 90%;
+}
+
+/* ロゴのサイズと余白 */
+.login-logo {
+  width: 80px;
+  margin-bottom: 20px;
+}
+
+/* タイトルのスタイル */
+.login-title {
+  margin-bottom: 20px;
+  font-size: 24px;
+  font-weight: 600;
+  color: #333;
+}
+
+/* リンクの装飾をリセット */
+.login-link {
+  text-decoration: none;
+}
+
+/* ニューモーフィズムを採用したGoogleログインボタン */
+.login-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 15px 20px;
+  font-size: 20px;
+  font-weight: 600;
+  color: #555;
+  background-color: #e0e5ec;
+  border: none;
+  border-radius: 50px;
+  cursor: pointer;
+  box-shadow: 8px 8px 16px #a3b1c6, -8px -8px 16px #ffffff;
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+/* オプション： */
+.login-button::before {
+  content: "";
+  display: inline-block;
+  /* background-image: url('../common/images/google-icon.png'); */
+  background-size: contain;
+  background-repeat: no-repeat;
+  width: 24px;
+  height: 24px;
+  margin-right: 10px;
+}
+
+/* ホバー時のエフェクト */
+.login-button:hover {
+  transform: translateY(-4px);
+  box-shadow: 12px 12px 24px #a3b1c6, -12px -12px 24px #ffffff;
+}
+
+/* クリック時のエフェクト */
+.login-button:active {
+  transform: translateY(0);
+  box-shadow: inset 4px 4px 8px #a3b1c6, inset -4px -4px 8px #ffffff;
+}

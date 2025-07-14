@@ -1,0 +1,131 @@
+/* ベースレイアウト */
+.container {
+  width: 80%;
+  margin: 20px auto;
+  font-family: "Arial", sans-serif;
+}
+
+/* 検索ボックス */
+.search-box {
+  background: #f9f9f9;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+/* 検索フィルターのレイアウト */
+.search-filters {
+  display: flex;
+  gap: 50px;
+  align-items: flex-end;
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+
+/* 各入力エリアの共通デザイン */
+.input-group {
+  display: flex;
+  flex-direction: column;
+  flex: 1; /* 均等な幅を持たせる */
+  min-width: 180px; /* 最小幅を確保 */
+}
+
+/* 問題タイトルの入力フィールドを広くする */
+.input-group.wide {
+  margin-bottom: -10px;
+  flex: 2.5; /* 他の要素よりも広めにする */
+}
+
+.input-group label {
+  font-size: 14px;
+  margin-bottom: 5px;
+  font-weight: bold;
+}
+
+.input-group input,
+.input-group select {
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  width: 100%;
+}
+
+/* 検索ボタン */
+.search-button {
+  background: #4caf50;
+  color: white;
+  padding: 10px 15px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: background 0.3s;
+  min-width: 120px;
+}
+
+.search-button:hover {
+  background: #45a049;
+}
+
+/* 検索結果 */
+.results-box {
+  margin-top: 20px;
+  background: white;
+  padding: 15px;
+  border-radius: 8px;
+  box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.1);
+  min-height: 480px;
+  overflow-y: auto;
+}
+
+/* ヘッダー行を固定 */
+thead {
+  /* position: sticky; */
+  /* top: 0; */
+  background: #f7e698;
+  /* z-index: 100; */
+}
+
+/* テーブルのスタイル */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+}
+
+th,
+td {
+  padding: 10px;
+  text-align: left;
+  border-bottom: 1px solid #ddd;
+}
+
+tbody tr:hover {
+  background: #f1f1f1;
+}
+
+/* ページネーション */
+.pagination {
+  display: flex;
+  justify-content: center;
+  margin-top: 20px;
+}
+
+.pagination button {
+  background: #ddd;
+  border: none;
+  padding: 8px 12px;
+  margin: 2px;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+
+.pagination button.active {
+  background: #4caf50;
+  color: white;
+}
+
+.pagination button:hover {
+  background: #45a049;
+}
