@@ -64,7 +64,7 @@ func (q *QuestionHandler) GetAllGenres(c echo.Context) error {
 }
 
 // GetQuestionSet
-// 問題集詳細を取得
+// 問題集詳細を取得（詳細画面、回答画面用）
 func (q *QuestionHandler) GetQuestionSet(c echo.Context) error {
 	// ユーザー認証チェック
 	userID, err := utils.GetUserIDFromContext(c)
@@ -107,6 +107,41 @@ func (q *QuestionHandler) GetQuestionSet(c echo.Context) error {
 		resData[0].IsEvaluated = false
 	}
 	resData[0].Evaluate = myStar.Evaluate
+
+	return c.JSON(http.StatusOK, resData)
+}
+
+// GetQuestionSetForFix
+// 問題集詳細を取得（問題集修正用）
+func (q *QuestionHandler) GetQuestionSetForFix(c echo.Context) error {
+	// ユーザー認証チェック
+	userID, err := utils.GetUserIDFromContext(c)
+	if err != nil {
+		return c.JSON(http.StatusUnauthorized, echo.Map{"error": "user_id not found"})
+	}
+
+	// リクエストパラメータから問題セットIDを取得
+	QuestionSetIDStr := c.QueryParam("question_set_id")
+	QuestionSetID, err := strconv.Atoi(QuestionSetIDStr)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, err)
+	}
+
+	// 画面に表示するデータを返す構造体
+	resData, err := q.Service.GetQuestionsForFixByQuestionSetId(QuestionSetID, userID)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, err)
+	}
+
+	// resDataがnilだったら、問題作成者ではないユーザーが問題を修正しようとしているので、権限がないよってことを返す
+	if resData == nil {
+		fmt.Println("不正なユーザーが問題集を修正しようとした。")
+		fmt.Printf("ユーザーID: %s\n", userID)
+		fmt.Printf("問題集ID: %d\n", QuestionSetID)
+		return c.JSON(http.StatusForbidden, echo.Map{
+			"message": "この問題集を修正する権限がありません。",
+		})
+	}
 
 	return c.JSON(http.StatusOK, resData)
 }
@@ -172,6 +207,11 @@ func (q *QuestionHandler) GetMyQuestionList(c echo.Context) error {
 		return c.JSON(http.StatusUnauthorized, echo.Map{"error": "user_id not found"})
 	}
 
+	// title,status,genreをパラメータから受け取る
+	title := c.QueryParam("title")
+	status := c.QueryParam("status")
+	genreIdStr := c.QueryParam("genreId")
+	genreId, err := strconv.Atoi(genreIdStr)
 	// pageとlimitをパラメータから受け取る
 	pageStr := c.QueryParam("page")
 	page, err := strconv.Atoi(pageStr)
@@ -185,7 +225,71 @@ func (q *QuestionHandler) GetMyQuestionList(c echo.Context) error {
 	}
 
 	// サービスからデータを取得
-	questions, totalCount, err := q.Service.GetMyQuestionList(userID, page, limit)
+	questions, totalCount, err := q.Service.GetMyQuestionList(userID, title, status, genreId, page, limit)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
+	}
+
+	return c.JSON(http.StatusOK, echo.Map{
+		"totalCount": totalCount,
+		"questions":  questions,
+	})
+
+}
+
+// DeleteQuestionSet
+// 問題集修正-検索 画面から問題集を削除する
+func (q *QuestionHandler) DeleteQuestionSet(c echo.Context) error {
+	// ユーザー認証チェック
+	userID, err := utils.GetUserIDFromContext(c)
+	if err != nil {
+		return c.JSON(http.StatusUnauthorized, echo.Map{"error": "user_id not found"})
+	}
+
+	// title,status,genreをパラメータから受け取る
+	strQuestionSetId := c.QueryParam("question_set_id")
+	questionSetID, err := strconv.Atoi(strQuestionSetId)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, err)
+	}
+
+	// 削除しようとしているユーザーが問題作成者であるかを確認した上で削除を実行
+	if err := q.Service.DeleteQuestionSet(userID, questionSetID); err != nil {
+		return c.JSON(http.StatusInternalServerError, err)
+	}
+
+	return c.JSON(http.StatusOK, nil)
+
+}
+
+// GetMyCreatedQuestionList
+// 問題集修正-検索に表示するデータを取得する
+func (q *QuestionHandler) GetMyCreatedQuestionList(c echo.Context) error {
+	// ユーザー認証チェック
+	userID, err := utils.GetUserIDFromContext(c)
+	if err != nil {
+		return c.JSON(http.StatusUnauthorized, echo.Map{"error": "user_id not found"})
+	}
+
+	// title,status,genreをパラメータから受け取る
+	title := c.QueryParam("title")
+	visibility := c.QueryParam("visibility")
+	genreIdStr := c.QueryParam("genreId")
+	genreId, err := strconv.Atoi(genreIdStr)
+	// pageとlimitをパラメータから受け取る
+	pageStr := c.QueryParam("page")
+	page, err := strconv.Atoi(pageStr)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, err)
+	}
+	limitStr := c.QueryParam("limit")
+	limit, err := strconv.Atoi(limitStr)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, err)
+	}
+
+	// サービスからデータを取得
+	questions, totalCount, err := q.Service.GetMyCreatedQuestionList(userID, title, visibility, genreId, page, limit)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, echo.Map{"error": err.Error()})
 	}
@@ -483,6 +587,47 @@ func (q *QuestionHandler) InsertQuestions(c echo.Context) error {
 	return c.JSON(http.StatusOK, echo.Map{
 		"message": "questions created successfully",
 		"count":   len(questions),
+	})
+}
+
+// FixQuestions 問題作成（Questionsテーブルへの登録、認証必須）
+func (q *QuestionHandler) FixQuestions(c echo.Context) error {
+	// ユーザー認証チェック
+	userId, contextErr := utils.GetUserIDFromContext(c)
+	if contextErr != nil {
+		return c.JSON(http.StatusUnauthorized, echo.Map{"error": "user_id not found"})
+	}
+
+	// リクエストデータを取得
+	var req FixQuestionsRequest
+	if err := c.Bind(&req); err != nil {
+		fmt.Println("Bind error:", err)
+		return c.JSON(http.StatusBadRequest, echo.Map{"error": "invalid request"})
+	}
+
+	var questions []FixQuestion
+	for _, item := range req.Questions {
+		question := FixQuestion{
+			ID:         item.ID,
+			Title:      req.Title,
+			GenreID:    item.GenreID,
+			Visibility: item.Visibility,
+			Question:   item.Question,
+			Answer:     item.Answer,
+			Choices1:   item.Choices1,
+			Choices2:   item.Choices2,
+			UpdatedAt:  time.Now(),
+		}
+		questions = append(questions, question)
+	}
+
+	// トランザクション開始
+	if err := q.Service.FixQuestionSet(req.QuestionSetId, questions, req.GenreId, req.Title, userId); err != nil {
+		return c.JSON(http.StatusInternalServerError, err.Error())
+	}
+
+	return c.JSON(http.StatusOK, echo.Map{
+		"message": "questions created successfully",
 	})
 }
 

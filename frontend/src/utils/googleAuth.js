@@ -1,6 +1,7 @@
 // src/utils/googleAuth.js
 export const googleAuthUrl = () => {
-  const clientId = ""; // Google Client ID
+  const clientId =
+    "1011488123966-s8n27t0v2uh8j4jff352cmj9bbrm73qk.apps.googleusercontent.com"; // Google Client ID
   const redirectUri = "http://localhost:3000/auth/callback"; // リダイレクトURL
   const scope = "openid profile email"; // 必要なスコープ
 

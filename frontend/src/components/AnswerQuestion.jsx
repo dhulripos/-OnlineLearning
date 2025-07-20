@@ -23,7 +23,7 @@ export default function AnswerQuestion() {
   // 問題集セットIDを元にデータを取得する
   const { data: questions, isLoading } = useQuery({
     queryKey: ["questions", { id }],
-    queryFn: () => getQuestionSet(id),
+    queryFn: () => getQuestionSet(id, "answer"),
   });
 
   // 正誤判定を行うバックエンドに処理を流す

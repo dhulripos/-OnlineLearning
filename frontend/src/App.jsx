@@ -20,6 +20,8 @@ import MyQuestionList from "./components/MyQuestionList";
 import AnswerQuestion from "./components/AnswerQuestion";
 import SubmitResults from "./components/SubmitResults";
 import FeatureIntro from "./components/FeatureIntro";
+import FixQuestion from "./components/FixQuestion";
+import QuestionFixSearch from "./components/QuestionFixSearch";
 
 const App = () => {
   return (
@@ -44,8 +46,11 @@ const App = () => {
 
       {/* 問題集絡み */}
       <Route path="/question" element={<Question />}>
-        {/* 問題作成 */}
+        {/* 問題集作成 */}
         <Route path="create" element={<CreateQuestion />} />
+        {/* 問題集修正 */}
+        <Route path="fix/search" element={<QuestionFixSearch />} />
+        <Route path="fix/:id" element={<FixQuestion />} />
         {/* 問題集検索 */}
         <Route path="search" element={<QuestionList />} />
         {/* お気に入り問題集一覧 */}

@@ -262,7 +262,11 @@ export default function QuestionList() {
               )}
             </select>
           </div>
-          <button className="search-button" onClick={handleSearch}>
+          <button
+            className="search-button"
+            onClick={handleSearch}
+            disabled={isLoading}
+          >
             検索
           </button>
         </div>
@@ -270,7 +274,6 @@ export default function QuestionList() {
 
       {/* 検索結果 */}
       <div className="results-box">
-        <h3>検索結果</h3>
         <table>
           <thead>
             <tr>

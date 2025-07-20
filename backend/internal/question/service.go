@@ -3,6 +3,7 @@ package question
 import (
 	"errors"
 	"gorm.io/gorm"
+	"time"
 )
 
 type QuestionServiceInterface interface {
@@ -14,6 +15,7 @@ type QuestionServiceInterface interface {
 	ChangeStatusToInProgress(userId string, questionSetId int) error
 	GetAllGenres() ([]Genre, error)
 	GetQuestionsByQuestionSetId(questionSetId int) ([]QuestionSetResponse, error)
+	GetQuestionsForFixByQuestionSetId(questionSetId int, userId string) ([]QuestionSetForFixResponse, error)
 	CountMyQuestions(userId string, questionSetId int) (int64, error)
 	CountAndEvaluateByUser(userId string, questionSetId int) (MyStar, error)
 	InsertMyQuestion(MyQuestion) error
@@ -23,13 +25,16 @@ type QuestionServiceInterface interface {
 	InsertQuestionSet(questionSet []QuestionSet) error
 	InsertStar(star Star) error
 	CreateQuestionSet(questions []InsertQuestion) error
+	FixQuestionSet(questionSetID int, questions []FixQuestion, genreID int, title, userId string) error
 	InsertMyStar(userID string, questionSetID, rating int) error
 	InsertOrUpdateStarRating(questionSetID int, rating int) (float64, error)
 	InsertFavoriteQuestion(userID string, questionSetID int) error
 	DeleteFavoriteQuestion(userID string, questionSetID int) error
-	GetMyQuestionList(userID string, page, limit int) ([]MyQuestionForShow, int64, error)
+	GetMyQuestionList(userID, title, status string, genreId, page, limit int) ([]MyQuestionForShow, int64, error)
+	GetMyCreatedQuestionList(userID, title, visibility string, genreId, page, limit int) ([]MyCreatedQuestionForShow, int64, error)
 	SearchQuestions(title string, visibility string, genreID int, userID string, page int, limit int) ([]SearchQuestionResponse, int64, error)
 	SearchFavoriteQuestions(title string, visibility string, genreID int, userID string, page int, limit int) ([]FavoriteQuestionResponse, int64, error)
+	DeleteQuestionSet(userID string, questionSetID int) error
 }
 
 type QuestionService struct {
@@ -98,6 +103,18 @@ func (q QuestionService) GetQuestionsByQuestionSetId(questionSetId int) ([]Quest
 		return nil, err
 	}
 	return questionSetResponse, nil
+}
+
+func (q QuestionService) GetQuestionsForFixByQuestionSetId(questionSetId int, userId string) ([]QuestionSetForFixResponse, error) {
+	questionSetForFixResponse, err := q.Repo.GetQuestionsForFixByQuestionSetId(questionSetId, userId)
+	if err != nil {
+		return nil, err
+	}
+	// 修正しようとしているユーザーと問題集を作成したユーザーが違ったらnilを返す
+	if len(questionSetForFixResponse) == 0 {
+		return nil, nil
+	}
+	return questionSetForFixResponse, nil
 }
 
 func (q QuestionService) CountMyQuestions(userId string, questionSetId int) (int64, error) {
@@ -209,6 +226,125 @@ func (q QuestionService) CreateQuestionSet(questions []InsertQuestion) error {
 	})
 }
 
+func (q QuestionService) FixQuestionSet(questionSetID int, questions []FixQuestion, genreID int, title, userId string) error {
+	if len(questions) == 0 {
+		return errors.New("no questions")
+	}
+
+	return q.Repo.Transaction(func(tx *gorm.DB) error {
+		// 1. question_setテーブルから、既存のquestions_idを取得（削除されるデータと突き合わせるため）
+		existingQuestionIDs, err := q.Repo.GetQuestionIdsByQuestionSetId(questionSetID)
+		if err != nil {
+			return err
+		}
+		// 削除対象のidが問題集の中で一番若い場合、修正もしくは作成のレコードに含める
+		// 既存の問題が全部削除されてガッツリ作り直される場合は、新規作成のレコードに過去の作成日を入れる
+		minExistingCreatedAt, err := q.Repo.GetDateByQuestionIds(existingQuestionIDs)
+		if err != nil {
+			return err
+		}
+
+		// 2.更新前のquestion_idと更新対象のquestion_idを突き合わせ
+		// まず既存のIDをマップに入れて0で初期化
+		existingQuestionIDsMap := make(map[int]int)
+		for i := 0; i < len(existingQuestionIDs); i++ {
+			existingQuestionIDsMap[existingQuestionIDs[i]]++
+		}
+		// 更新対象のquestion_idでマップをインクリメント
+		var createQuestions []InsertQuestion
+		var fixQuestions []FixQuestion
+		var deleteQuestionIds []int
+		for _, question := range questions {
+			if question.ID == nil {
+				// 作成対象のquestions（idは自動連番）
+				createQuestions = append(createQuestions, InsertQuestion{
+					UserID:     userId,
+					Title:      title,
+					GenreID:    genreID,
+					Visibility: question.Visibility,
+					Question:   question.Question,
+					Answer:     question.Answer,
+					Choices1:   question.Choices1,
+					Choices2:   question.Choices2,
+					CreatedAt:  *minExistingCreatedAt,
+					UpdatedAt:  time.Now(),
+				})
+				continue // ここで以降の処理をスキップする
+			}
+
+			// 修正対象
+			if existingQuestionIDsMap[*question.ID] > 0 {
+				// 修正対象のquestions
+				fixQuestions = append(fixQuestions, question)
+				existingQuestionIDsMap[*question.ID]-- // 削除対象の洗い出しに1以上のやつを使うため、デクリメント
+			}
+
+		}
+
+		// 削除対象のquestion_idたち
+		for questionId, count := range existingQuestionIDsMap {
+			if count > 0 {
+				deleteQuestionIds = append(deleteQuestionIds, questionId)
+			}
+		}
+
+		// 3-1.追加対象の問題をquestionsテーブルに追加
+		if len(createQuestions) > 0 {
+			if err := q.Repo.InsertQuestions(createQuestions); err != nil {
+				return err
+			}
+			// 3-2.追加対象の問題を構造体に追加したい（question_set_idは修正対象のものと同じにする必要あり）。
+			var questionSets []QuestionSet
+			for _, question := range createQuestions {
+				questionSets = append(questionSets, QuestionSet{
+					SetID:      questionSetID,
+					QuestionID: question.ID,
+					GenreID:    genreID,
+				})
+			}
+			// questionsテーブルに追加したidをもとに、question_setテーブルにレコードを紐付け
+			if err := q.Repo.InsertQuestionSet(questionSets); err != nil {
+				return err
+			}
+		}
+
+		// 4.リクエストに含まれていなかった問題を削除
+		// questionsテーブルからidを指定して削除
+		if len(deleteQuestionIds) > 0 {
+			if err := q.Repo.DeleteQuestionsByIds(deleteQuestionIds); err != nil {
+				return err
+			}
+			// question_setテーブルからquestion_idを指定して削除
+			if err := q.Repo.DeleteQuestionSetByIds(deleteQuestionIds); err != nil {
+				return err
+			}
+		}
+
+		// 5.修正対象のレコードをquestionsテーブルに更新
+		// ジャンルが変わってる可能性があるので、questionsテーブルとquestion_setテーブルを更新しておく
+		// 5-1.questionsテーブルを更新
+		if len(fixQuestions) > 0 {
+			if err := q.Repo.FixQuestions(fixQuestions); err != nil {
+				return err
+			}
+			// 5-2.question_setテーブルを更新
+			var fixQuestionSets []QuestionSet
+			for _, question := range fixQuestions {
+				fixQuestionSets = append(fixQuestionSets, QuestionSet{
+					SetID:      questionSetID,
+					QuestionID: *question.ID,
+					GenreID:    genreID,
+				})
+			}
+			if err := q.Repo.FixQuestionSet(fixQuestionSets); err != nil {
+				return err
+			}
+		}
+
+		return nil
+	})
+}
+
 func (q QuestionService) InsertMyStar(userID string, questionSetID, rating int) error {
 	if err := q.Repo.InsertMyStar(userID, questionSetID, rating); err != nil {
 		return err
@@ -290,7 +426,7 @@ func (q QuestionService) DeleteFavoriteQuestion(userID string, questionSetID int
 }
 
 // GetMyQuestionList はページネーション処理を含めてリポジトリからデータを取得する
-func (q *QuestionService) GetMyQuestionList(userID string, page int, limit int) ([]MyQuestionForShow, int64, error) {
+func (q *QuestionService) GetMyQuestionList(userID, title, status string, genreId, page, limit int) ([]MyQuestionForShow, int64, error) {
 	// ページ番号・取得件数のバリデーション
 	if page < 1 {
 		page = 1
@@ -299,7 +435,20 @@ func (q *QuestionService) GetMyQuestionList(userID string, page int, limit int) 
 		limit = 10
 	}
 	offset := (page - 1) * limit
-	return q.Repo.GetMyQuestionList(userID, offset, limit)
+	return q.Repo.GetMyQuestionList(userID, title, status, genreId, offset, limit)
+}
+
+// GetMyCreatedQuestionList はページネーション処理を含めてリポジトリからデータを取得する
+func (q *QuestionService) GetMyCreatedQuestionList(userID, title, visibility string, genreId, page, limit int) ([]MyCreatedQuestionForShow, int64, error) {
+	// ページ番号・取得件数のバリデーション
+	if page < 1 {
+		page = 1
+	}
+	if limit <= 0 {
+		limit = 10
+	}
+	offset := (page - 1) * limit
+	return q.Repo.GetMyCreatedQuestionList(userID, title, visibility, genreId, offset, limit)
 }
 
 func (q QuestionService) SearchQuestions(title string, visibility string, genreID int, userID string, page int, limit int) ([]SearchQuestionResponse, int64, error) {
@@ -328,4 +477,49 @@ func (q QuestionService) SearchFavoriteQuestions(title string, visibility string
 
 	// Repository 層の SearchFavoriteQuestions を呼び出す
 	return q.Repo.SearchFavoriteQuestions(title, visibility, genreID, userID, offset, limit)
+}
+
+func (q QuestionService) DeleteQuestionSet(userID string, questionSetID int) error {
+	// questionSetIDから削除しようとしている問題集の作成者を取得して、そいつとuserIDが一致したら削除を実行する
+	judge, err := q.Repo.IsQuestionWriter(userID, questionSetID)
+	if err != nil {
+		return err
+	}
+	if !judge {
+		return errors.New("作成者ではないユーザーが問題を削除しようとしています。")
+	}
+
+	// 問題の削除を実行
+	deleteQuestionIds, err := q.Repo.GetQuestionIdsByQuestionSetId(questionSetID)
+	if err != nil {
+		return err
+	}
+	if len(deleteQuestionIds) > 0 {
+		// questionsテーブルから問題を物理削除
+		err := q.Repo.DeleteQuestionsByIds(deleteQuestionIds)
+		if err != nil {
+			return err
+		}
+		// question_setテーブルから問題を物理削除
+		err2 := q.Repo.DeleteQuestionSetByIds(deleteQuestionIds)
+		if err2 != nil {
+			return err2
+		}
+		// stars（みんながつけた評価テーブル）からquestionSetIDをもとにレコードを削除
+		err3 := q.Repo.DeleteStarsByQuestionSetID(questionSetID)
+		if err3 != nil {
+			return err3
+		}
+		// my_stars（自分がつけた評価テーブル）からquestionSetIDをもとにレコードを削除
+		err4 := q.Repo.DeleteMyStarsByQuestionSetID(questionSetID)
+		if err4 != nil {
+			return err4
+		}
+		// my_questions（マイ学習リストに追加した問題集）からquestionSetIDをもとにレコードを削除
+		err5 := q.Repo.DeleteMyQuestionsByQuestionSetID(questionSetID)
+		if err5 != nil {
+			return err5
+		}
+	}
+	return nil
 }

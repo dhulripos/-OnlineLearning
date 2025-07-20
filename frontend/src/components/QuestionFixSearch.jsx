@@ -1,32 +1,38 @@
 import { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import useQuestion from "../hooks/useQuestion";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import "../css/MyQuestionList.css";
+import "../css/Modal.css";
 import { useRecoilState } from "recoil";
-import { MyQuestionPageBackStorage } from "../recoils/pageBackRecoil";
+import { MyCreatedQuestionPageBackStorage } from "../recoils/pageBackRecoil";
 import LoadingMotion from "../utils/LoadingMotion";
-import { myQuestionSearchStorage } from "../recoils/questionRecoil";
+import { myCreatedQuestionSearchStorage } from "../recoils/questionRecoil";
 import useGenre from "../hooks/useGenre";
 
 export default function MyQuestionList() {
-  const getMyQuestionList = useQuestion("getMyQuestionList");
+  const getMyCreatedQuestionList = useQuestion("getMyCreatedQuestionList");
+  const deleteQuestionSet = useQuestion("deleteQuestionSet");
   const getAllGenres = useGenre("all");
 
-  const navigate = useNavigate();
-
   // Recoil
-  const [page, setPage] = useRecoilState(MyQuestionPageBackStorage);
-  const [myQuestionSearch, setMyQuestionSearch] = useRecoilState(
-    myQuestionSearchStorage
+  const [page, setPage] = useRecoilState(MyCreatedQuestionPageBackStorage);
+  const [myCreatedQuestionSearch, setMyCreatedQuestionSearch] = useRecoilState(
+    myCreatedQuestionSearchStorage
   ); // 絞り込み条件を格納するRecoil
 
   // 検索条件のstate
   const [limit] = useState(10); // 1ページの表示件数
   // 絞り込み条件のstate
   const [title, setTitle] = useState("");
-  const [status, setStatus] = useState("all");
   const [genreId, setGenreId] = useState(0);
+  const [visibility, setVisibility] = useState("all");
+  // 削除後のメッセージ
+  const [successMessage, setSuccessMessage] = useState("");
+
+  // モーダル用
+  const [showModal, setShowModal] = useState(false);
+  const [selectedQuestion, setSelectedQuestion] = useState(null);
 
   // 検索実行（ページネーション）
   const {
@@ -34,17 +40,23 @@ export default function MyQuestionList() {
     isLoading,
     refetch,
   } = useQuery({
-    queryKey: ["questions", { title, status, genreId, page, limit }],
+    queryKey: ["questions", { title, genreId, visibility, page, limit }],
     queryFn: () =>
-      getMyQuestionList({
-        title: myQuestionSearch?.title,
-        status: myQuestionSearch?.status,
-        genreId: myQuestionSearch?.genreId,
+      getMyCreatedQuestionList({
+        title: myCreatedQuestionSearch?.title,
+        visibility: myCreatedQuestionSearch?.visibility,
+        genreId: myCreatedQuestionSearch?.genreId,
         page: page,
         limit: limit,
       }),
-    enabled: true, // 初回実行
+    enabled: false, // 初回実行を防ぐ
+    retry: (failureCount, error) => {
+      // 403 や 404 は即失敗、それ以外は2回だけ再試行
+      if ([403, 404, 500, 401].includes(error?.response?.status)) return false;
+      return failureCount < 2;
+    },
   });
+
   // 初期表示用＆詳細から戻ってきたとき用
   useEffect(() => {
     refetch();
@@ -70,11 +82,45 @@ export default function MyQuestionList() {
     queryFn: () => getAllGenres(),
   });
 
+  // 問題の更新用関数
+  const { mutate: deleteMutate } = useMutation({
+    mutationFn: (data) => deleteQuestionSet(data),
+    onSuccess: (res) => {
+      setSuccessMessage("削除が完了しました");
+
+      // モーダルを閉じる
+      setShowModal(false);
+      setSelectedQuestion(null);
+
+      // メッセージを5秒後に消す
+      setTimeout(() => {
+        setSuccessMessage("");
+      }, 5000);
+
+      // データを再取得（リロードより軽い）
+      refetch();
+    },
+    onError: (error) => {
+      console.error("更新エラー:", error);
+    },
+  });
+
+  // 表示の制御
+  const handleDelete = (questionSetId, title) => {
+    const question = { id: questionSetId, title: title };
+    setSelectedQuestion(question);
+    setShowModal(true);
+  };
+
   return (
     <div className="container">
+      {/* 削除後のメッセージ */}
+      {successMessage && (
+        <div className="success-message">{successMessage}</div>
+      )}
       {/* 検索エリア */}
       <div className="screen-title">
-        <h2>マイ学習リスト</h2>
+        <h2>問題集修正-検索</h2>
 
         <div className="search-filters">
           <div className="input-group wide">
@@ -82,12 +128,11 @@ export default function MyQuestionList() {
             <input
               type="text"
               placeholder="タイトルを入力"
-              defaultValue={myQuestionSearch?.title}
-              value={title}
+              value={myCreatedQuestionSearch?.title}
               onChange={(e) => {
                 const newTitle = e.target.value;
                 setTitle(newTitle);
-                setMyQuestionSearch((prev) => ({
+                setMyCreatedQuestionSearch((prev) => ({
                   ...prev,
                   title: newTitle,
                 }));
@@ -95,34 +140,37 @@ export default function MyQuestionList() {
               }}
             />
           </div>
+
           <div className="input-group">
-            <label>ステータス</label>
+            <label>公開範囲</label>
             <select
-              value={myQuestionSearch?.status}
+              className="visibility-select"
+              value={myCreatedQuestionSearch?.visibility}
               onChange={(e) => {
-                const newStatus = e.target.value;
-                setStatus(newStatus);
-                setMyQuestionSearch((prev) => ({
+                const newVisibility = e.target.value;
+                console.log(newVisibility);
+                setVisibility(e.target.value);
+                setMyCreatedQuestionSearch((prev) => ({
                   ...prev,
-                  status: newStatus,
+                  visibility: newVisibility,
                 }));
                 setPage(1);
               }}
             >
-              <option value="all">すべて</option>
-              <option value="not_started">未着手</option>
-              <option value="in_progress">進行中</option>
-              <option value="completed">完了</option>
+              <option value="all">指定なし</option>
+              <option value="private">プライベート</option>
+              <option value="public">パブリック</option>
             </select>
           </div>
+
           <div className="input-group">
             <label>ジャンル</label>
             <select
-              value={Number(myQuestionSearch?.genreId)}
+              value={Number(myCreatedQuestionSearch?.genreId)}
               onChange={(e) => {
                 const newGenreId = e.target.value;
                 setGenreId(Number(e.target.value));
-                setMyQuestionSearch((prev) => ({
+                setMyCreatedQuestionSearch((prev) => ({
                   ...prev,
                   genreId: Number(newGenreId),
                 }));
@@ -160,12 +208,11 @@ export default function MyQuestionList() {
             <tr>
               <th className="my-question-list-th">問題集タイトル</th>
               <th className="my-question-list-th">ジャンル</th>
+              <th className="my-question-list-th">公開範囲</th>
               <th className="my-question-list-th">総問題数</th>
-              {/* <th className="my-question-list-th">正解数</th> */}
-              <th className="my-question-list-th">進捗率</th>
-              {/* <th className="my-question-list-th">予定進捗率</th> */}
-              <th className="my-question-list-th">期限</th>
-              <th className="my-question-list-th">ステータス</th>
+              <th className="my-question-list-th">作成日</th>
+              <th className="my-question-list-th">更新日</th>
+              <th className="my-question-list-th"></th>
             </tr>
           </thead>
           <tbody className="my-question-list-tbody">
@@ -194,7 +241,7 @@ export default function MyQuestionList() {
                         gap: "16px", // 要素間のスペース
                       }}
                     >
-                      <Link to={`/question/set/${questionSetId}`}>
+                      <Link to={`/question/fix/${questionSetId}`}>
                         {question?.title}
                       </Link>
                     </td>
@@ -203,35 +250,34 @@ export default function MyQuestionList() {
                       {question?.genreName}
                     </td>
                     <td className="my-question-list-td">
+                      {question?.visibility === "public"
+                        ? "パブリック"
+                        : "プライベート"}
+                    </td>
+                    <td className="my-question-list-td">
                       {question?.totalQuestions} 問
                     </td>
-                    {/* <td className="my-question-list-td">
-                      {question?.answeredCount} 問
-                    </td> */}
                     <td className="my-question-list-td">
-                      <div className="progress-bar">
-                        <div
-                          className="progress-bar-fill"
-                          style={{ width: `${question?.progress}%` }}
-                        ></div>
-                        <span className="progress-bar-text">
-                          {question?.progress}%
-                        </span>
-                      </div>
-                    </td>
-
-                    {/* <td className="my-question-list-td">
-                      {question?.plannedProgress}
-                    </td> */}
-                    <td className="my-question-list-td">
-                      {new Date(question?.deadline).toISOString().split("T")[0]}
+                      {question?.createdAt &&
+                        new Date(question?.createdAt).toLocaleDateString(
+                          "ja-JP"
+                        )}
                     </td>
                     <td className="my-question-list-td">
-                      {{
-                        not_started: "未着手",
-                        in_progress: "進行中",
-                        completed: "完了",
-                      }[question?.status] || "不明"}
+                      {question?.updatedAt &&
+                        new Date(question?.updatedAt).toLocaleDateString(
+                          "ja-JP"
+                        )}
+                    </td>
+                    <td className="my-question-list-td">
+                      <button
+                        className="delete-set-btn"
+                        onClick={() =>
+                          handleDelete(questionSetId, question?.title)
+                        }
+                      >
+                        削除
+                      </button>
                     </td>
                   </tr>
                 );
@@ -239,6 +285,32 @@ export default function MyQuestionList() {
             )}
           </tbody>
         </table>
+
+        {/* モーダル */}
+        {showModal && selectedQuestion && (
+          <div className="modal-overlay">
+            <div className="modal-content">
+              <p>「{selectedQuestion?.title}」を削除しますか？</p>
+              <div className="modal-buttons">
+                <button
+                  onClick={() => {
+                    deleteMutate(selectedQuestion?.id);
+                  }}
+                >
+                  はい
+                </button>
+                <button
+                  onClick={() => {
+                    setShowModal(false);
+                    setSelectedQuestion(null);
+                  }}
+                >
+                  いいえ
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ページネーション */}

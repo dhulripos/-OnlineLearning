@@ -19,3 +19,10 @@ export const MyQuestionPageBackStorage = atom({
   default: 1,
   effects_UNSTABLE: [persistAtom], // 状態を永続化
 });
+
+// 問題集修正-検索から別の画面に行って、そこから戻るボタンで帰ってくる時に使用するアトム
+export const MyCreatedQuestionPageBackStorage = atom({
+  key: "MyCreatedQuestionPageBackStorage",
+  default: 1,
+  effects_UNSTABLE: [persistAtom], // 状態を永続化
+});

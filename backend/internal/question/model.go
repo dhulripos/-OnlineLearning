@@ -21,8 +21,27 @@ type InsertQuestionsRequest struct {
 	Questions []QuestionRequestBody `json:"questions"`
 }
 
+// FixQuestionsRequest
+type FixQuestionsRequest struct {
+	QuestionSetId int                      `json:"questionSetId"`
+	Title         string                   `json:"title"`
+	GenreId       int                      `json:"genreId"`
+	Questions     []FixQuestionRequestBody `json:"questions"`
+}
+
 // QuestionRequestBody は問題データの構造
 type QuestionRequestBody struct {
+	GenreID    int    `json:"genreId"`
+	Visibility string `json:"visibility"`
+	Question   string `json:"question"`
+	Answer     string `json:"answer"`
+	Choices1   string `json:"choices1"`
+	Choices2   string `json:"choices2"`
+}
+
+// FixQuestionRequestBody
+type FixQuestionRequestBody struct {
+	ID         *int   `json:"id,omitempty"`
 	GenreID    int    `json:"genreId"`
 	Visibility string `json:"visibility"`
 	Question   string `json:"question"`
@@ -62,6 +81,19 @@ type InsertQuestion struct {
 	UpdatedAt  time.Time `json:"updatedAt" gorm:"column:updated_at"`
 }
 
+// FixQuestion データベースに挿入する用の構造体
+type FixQuestion struct {
+	ID         *int      `json:"id" gorm:"id"`
+	Title      string    `json:"title" gorm:"column:title"`
+	GenreID    int       `json:"genreId" gorm:"column:genre_id"`
+	Visibility string    `json:"visibility" gorm:"column:visibility"`
+	Question   string    `json:"question" gorm:"column:question"`
+	Answer     string    `json:"answer" gorm:"column:answer"`
+	Choices1   string    `json:"choices1" gorm:"column:choices1"`
+	Choices2   string    `json:"choices2" gorm:"column:choices2"`
+	UpdatedAt  time.Time `json:"updatedAt" gorm:"column:updated_at"`
+}
+
 // QuestionSetResponse GetQuestionSetで返すための構造体
 type QuestionSetResponse struct {
 	ID           int    `json:"id" gorm:"column:id"`
@@ -74,6 +106,18 @@ type QuestionSetResponse struct {
 	IsRegistered bool   `json:"isRegistered" gorm:"column:is_registered"`
 	IsEvaluated  bool   `json:"isEvaluated" gorm:"column:is_evaluated"`
 	Evaluate     int    `json:"evaluate"`
+}
+
+// QuestionSetForFixResponse 問題集修正用
+type QuestionSetForFixResponse struct {
+	ID         int    `json:"id" gorm:"column:id"`
+	Title      string `json:"title" gorm:"column:title"`
+	Question   string `json:"question" gorm:"column:question"`
+	Answer     string `json:"answer" gorm:"column:answer"`
+	Choices1   string `json:"choices1" gorm:"column:choices1"`
+	Choices2   string `json:"choices2" gorm:"column:choices2"`
+	GenreId    int    `json:"genreId" gorm:"column:genre_id"`
+	Visibility string `json:"visibility" gorm:"column:visibility"`
 }
 
 // QuestionSet は問題集テーブルにレコードを挿入する構造体
@@ -144,6 +188,16 @@ type MyQuestionForShow struct {
 	Progress       float64   `json:"progress" gorm:"column:progress"`
 	Deadline       time.Time `json:"deadline" gorm:"column:deadline;type:timestamp"`
 	Status         string    `json:"status" gorm:"column:status"`
+}
+
+type MyCreatedQuestionForShow struct {
+	QuestionSetID  int       `json:"questionSetId" gorm:"column:set_id"`
+	Title          string    `json:"title" gorm:"column:title"`
+	GenreName      string    `json:"genreName" gorm:"column:genre_name"`
+	Visibility     string    `json:"visibility" gorm:"column:visibility"`
+	CreatedAt      time.Time `json:"createdAt" gorm:"column:created_at"`
+	UpdatedAt      time.Time `json:"updatedAt" gorm:"column:updated_at"`
+	TotalQuestions int       `json:"totalQuestions" gorm:"column:total_questions"`
 }
 
 type SearchQuestionResponse struct {

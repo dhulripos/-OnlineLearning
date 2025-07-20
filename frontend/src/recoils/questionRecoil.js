@@ -27,3 +27,24 @@ export const filterFavoriteQuestionStorage = atom({
   },
   effects_UNSTABLE: [persistAtom], // 状態を永続化
 });
+
+// マイ学習リストの絞り込み条件を保持するアトム
+export const myQuestionSearchStorage = atom({
+  key: "myQuestionSearchStorage",
+  default: {
+    title: "",
+    genreId: 0,
+    status: "",
+  },
+  effects_UNSTABLE: [persistAtom], // 状態を永続化
+});
+
+// 問題集修正-検索の絞り込み条件を保持するアトム
+export const myCreatedQuestionSearchStorage = atom({
+  key: "myCreatedQuestionSearchStorage",
+  default: {
+    title: "",
+    genreId: 0,
+  },
+  effects_UNSTABLE: [persistAtom], // 状態を永続化
+});

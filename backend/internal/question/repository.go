@@ -3,6 +3,8 @@ package question
 import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
+	"strings"
+	"time"
 )
 
 type QuestionRepository interface {
@@ -14,23 +16,35 @@ type QuestionRepository interface {
 	ChangeStatusToInProgress(userId string, questionSetId int) error
 	GetAllGenres() ([]Genre, error)
 	GetQuestionsByQuestionSetId(questionSetId int) ([]QuestionSetResponse, error)
+	GetQuestionsForFixByQuestionSetId(questionSetId int, userId string) ([]QuestionSetForFixResponse, error)
 	CountMyQuestions(userId string, questionSetId int) (int64, error)
 	CountAndEvaluateByUser(userId string, questionSetId int) (MyStar, error)
 	InsertMyQuestion(MyQuestion) error
 	GetQuestionsByIds(ids []int) ([]Question, error)
 	InsertQuestions(questions []InsertQuestion) error
+	FixQuestions(questions []FixQuestion) error
+	GetQuestionIdsByQuestionSetId(questionSetId int) ([]int, error)
 	GetNextSetID() (int, error)
 	InsertQuestionSet(questionSet []QuestionSet) error
+	FixQuestionSet(questionSet []QuestionSet) error
+	DeleteQuestionsByIds(ids []int) error
+	DeleteQuestionSetByIds(ids []int) error
 	InsertStar(star Star) error
 	InsertMyStar(userID string, questionSetID, rating int) error
+	GetDateByQuestionIds(questionIds []int) (*time.Time, error)
+	DeleteStarsByQuestionSetID(questionSetId int) error
+	DeleteMyStarsByQuestionSetID(questionSetId int) error
+	DeleteMyQuestionsByQuestionSetID(questionSetId int) error
 
 	GetStarForUpdate(questionSetID int) (*Star, error)
 	SaveStar(star *Star) error
 
 	InsertFavoriteQuestion(userID string, questionSetID int) error
 	DeleteFavoriteQuestion(userID string, questionSetID int) error
+	IsQuestionWriter(userId string, questionSetId int) (bool, error)
 
-	GetMyQuestionList(userId string, offset, limit int) ([]MyQuestionForShow, int64, error)
+	GetMyQuestionList(userId, title, status string, genreId, offset, limit int) ([]MyQuestionForShow, int64, error)
+	GetMyCreatedQuestionList(userId, title, visibility string, genreId, offset, limit int) ([]MyCreatedQuestionForShow, int64, error)
 	SearchQuestions(title string, visibility string, genreID int, userID string, offset int, limit int) ([]SearchQuestionResponse, int64, error)
 	SearchFavoriteQuestions(title string, visibility string, genreID int, userID string, offset int, limit int) ([]FavoriteQuestionResponse, int64, error)
 
@@ -138,11 +152,27 @@ func (r *GormRepository) GetQuestionsByQuestionSetId(questionSetId int) ([]Quest
 		Joins("JOIN online_learning_question_set qs on qs.question_id = q.id").
 		Joins("JOIN online_learning_genres g on g.id = q.genre_id").
 		Where("qs.set_id = ?", questionSetId).
+		Order("q.id ASC").
 		Find(&questionSetResponse).Error
 	if err != nil {
 		return nil, err
 	}
 	return questionSetResponse, nil
+}
+
+func (r *GormRepository) GetQuestionsForFixByQuestionSetId(questionSetId int, userId string) ([]QuestionSetForFixResponse, error) {
+	var questionSetForFixResponse []QuestionSetForFixResponse
+	err := r.DB.Table("online_learning_questions as q").
+		Select("q.id, q.title, q.question, q.answer, q.choices1, q.choices2, q.genre_id, q.visibility").
+		Joins("JOIN online_learning_question_set qs on qs.question_id = q.id").
+		Where("qs.set_id = ?", questionSetId).
+		Where("q.user_id = ?", userId).
+		Order("q.id ASC").
+		Find(&questionSetForFixResponse).Error
+	if err != nil {
+		return nil, err
+	}
+	return questionSetForFixResponse, nil
 }
 
 func (r *GormRepository) CountMyQuestions(userId string, questionSetId int) (int64, error) {
@@ -192,6 +222,31 @@ func (r *GormRepository) InsertQuestions(questions []InsertQuestion) error {
 	return nil
 }
 
+func (r *GormRepository) FixQuestions(questions []FixQuestion) error {
+	return r.DB.Transaction(func(tx *gorm.DB) error {
+		for _, q := range questions {
+			if err := r.DB.Table("online_learning_questions").
+				Where("id = ?", q.ID).
+				Updates(q).Error; err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+}
+
+// questionSetIDからquestion_setテーブルを検索して、question_idを取得する
+func (r *GormRepository) GetQuestionIdsByQuestionSetId(questionSetId int) ([]int, error) {
+	var ids []int
+	if err := r.DB.Table("online_learning_question_set qs").
+		Select("qs.question_id").
+		Where("qs.set_id = ?", questionSetId).
+		Find(&ids).Error; err != nil {
+		return nil, err
+	}
+	return ids, nil
+}
+
 // `set_id` の取得（同時リクエストでも競合しないようにトランザクション内で管理）
 func (r *GormRepository) GetNextSetID() (int, error) {
 	var lastSetID int
@@ -208,6 +263,22 @@ func (r *GormRepository) InsertQuestionSet(questionSet []QuestionSet) error {
 		return err
 	}
 	return nil
+}
+
+func (r *GormRepository) FixQuestionSet(questionSet []QuestionSet) error {
+	return r.DB.Transaction(func(tx *gorm.DB) error {
+		for _, qs := range questionSet {
+			if err := r.DB.Table("online_learning_question_set").
+				Where("question_id = ?", qs.QuestionID).
+				Updates(QuestionSet{
+					SetID:   qs.SetID,
+					GenreID: qs.GenreID,
+				}).Error; err != nil {
+				return err
+			}
+		}
+		return nil
+	})
 }
 
 func (r *GormRepository) InsertStar(star Star) error {
@@ -271,7 +342,7 @@ func (r *GormRepository) DeleteFavoriteQuestion(userID string, questionSetID int
 }
 
 // GetMyQuestionList はユーザーIDに基づきマイ学習リストを取得する
-func (r *GormRepository) GetMyQuestionList(userID string, offset, limit int) ([]MyQuestionForShow, int64, error) {
+func (r *GormRepository) GetMyQuestionList(userID, title, status string, genreId, offset, limit int) ([]MyQuestionForShow, int64, error) {
 	var resData []MyQuestionForShow
 
 	// 基本クエリ：一覧データの取得
@@ -291,6 +362,69 @@ func (r *GormRepository) GetMyQuestionList(userID string, offset, limit int) ([]
 		Joins("JOIN online_learning_questions q on qs.question_id = q.id").
 		Joins("JOIN online_learning_genres g on q.genre_id = g.id").
 		Where("mq.user_id = ?", userID)
+
+	// title,status,genreIdの値によってクエリを変更
+	if strings.Trim(title, "") != "" {
+		likeTitle := "%" + title + "%"
+		baseQuery.Where("q.title LIKE ?", likeTitle)
+		subQuery.Where("q.title LIKE ?", likeTitle)
+	}
+	if status != "all" {
+		baseQuery.Where("mq.status = ?", status)
+		subQuery.Where("mq.status = ?", status)
+	}
+	if genreId != 0 {
+		baseQuery.Where("q.genre_id = ?", genreId)
+		subQuery.Where("q.genre_id = ?", genreId)
+	}
+
+	countQuery := r.DB.Table("(?) as sub", subQuery).Select("COUNT(*)")
+	if err := countQuery.Scan(&totalCount).Error; err != nil {
+		return nil, 0, err
+	}
+
+	// ページネーションの適用
+	query := baseQuery.Offset(offset).Limit(limit)
+	if err := query.Find(&resData).Error; err != nil {
+		return nil, 0, err
+	}
+
+	return resData, totalCount, nil
+}
+
+func (r *GormRepository) GetMyCreatedQuestionList(userID, title, visibility string, genreId, offset, limit int) ([]MyCreatedQuestionForShow, int64, error) {
+	var resData []MyCreatedQuestionForShow
+
+	// 基本クエリ：一覧データの取得
+	baseQuery := r.DB.Table("online_learning_questions q").
+		Select("DISTINCT ON (qs.set_id) qs.set_id, q.title, g.name as genre_name, q.visibility ,q.created_at, q.updated_at, COUNT(qs.question_id) OVER(PARTITION BY qs.set_id ORDER BY qs.set_id) AS total_questions").
+		Joins("JOIN online_learning_question_set qs on qs.question_id = q.id").
+		Joins("JOIN online_learning_genres g on q.genre_id = g.id").
+		Where("q.user_id = ?", userID).
+		Order("qs.set_id ASC, q.id ASC")
+
+	// totalCount を取得するためのサブクエリ
+	var totalCount int64
+	subQuery := r.DB.Table("online_learning_questions q").
+		Select("DISTINCT ON (qs.set_id) qs.set_id, q.title, g.name as genre_name, q.visibility ,q.created_at, q.updated_at, COUNT(qs.question_id) OVER(PARTITION BY qs.set_id ORDER BY qs.set_id) AS total_questions").
+		Joins("JOIN online_learning_question_set qs on qs.question_id = q.id").
+		Joins("JOIN online_learning_genres g on q.genre_id = g.id").
+		Where("q.user_id = ?", userID)
+
+	// title,visibility,genreIdの値によってクエリを変更
+	if strings.Trim(title, "") != "" {
+		likeTitle := "%" + title + "%"
+		baseQuery.Where("q.title LIKE ?", likeTitle)
+		subQuery.Where("q.title LIKE ?", likeTitle)
+	}
+	if visibility != "all" {
+		baseQuery.Where("q.visibility = ?", visibility)
+		subQuery.Where("q.visibility = ?", visibility)
+	}
+	if genreId != 0 {
+		baseQuery.Where("q.genre_id = ?", genreId)
+		subQuery.Where("q.genre_id = ?", genreId)
+	}
 
 	countQuery := r.DB.Table("(?) as sub", subQuery).Select("COUNT(*)")
 	if err := countQuery.Scan(&totalCount).Error; err != nil {
@@ -421,4 +555,75 @@ func (r *GormRepository) SearchFavoriteQuestions(title string, visibility string
 	}
 
 	return questions, totalCount, nil
+}
+
+// questinsテーブルからquestion_idをもとに削除する
+func (r *GormRepository) DeleteQuestionsByIds(ids []int) error {
+	if err := r.DB.
+		Table("online_learning_questions").
+		Where("id IN ?", ids).
+		Delete(nil).Error; err != nil {
+		return err
+	}
+	return nil
+}
+
+// questin_setテーブルからquestion_idをもとに削除する
+func (r *GormRepository) DeleteQuestionSetByIds(ids []int) error {
+	if err := r.DB.
+		Table("online_learning_question_set").
+		Where("question_id IN ?", ids).
+		Delete(nil).Error; err != nil {
+		return err
+	}
+	return nil
+}
+
+func (r *GormRepository) GetDateByQuestionIds(questionIds []int) (*time.Time, error) {
+	var minCreatedAt time.Time
+	if err := r.DB.Table("online_learning_questions").
+		Select("MIN(created_at)").
+		Where("id IN ?", questionIds).
+		Scan(&minCreatedAt).Error; err != nil {
+		return nil, err
+	}
+	return &minCreatedAt, nil
+}
+
+func (r *GormRepository) IsQuestionWriter(userId string, questionSetId int) (bool, error) {
+	var judge bool
+	if err := r.DB.Table("online_learning_question_set qs").
+		Select("CASE WHEN COUNT(*) > 0 THEN 1 ELSE 0 END").
+		Joins("JOIN online_learning_questions q ON qs.question_id = q.id").
+		Where("qs.set_id = ?", questionSetId).
+		Where("q.user_id = ?", userId).
+		Scan(&judge).Error; err != nil {
+		return false, err
+	}
+	return judge, nil
+}
+
+func (r *GormRepository) DeleteStarsByQuestionSetID(questionSetId int) error {
+	if err := r.DB.Table("online_learning_stars").
+		Where("question_set_id = ?", questionSetId).
+		Delete(nil).Error; err != nil {
+		return err
+	}
+	return nil
+}
+func (r *GormRepository) DeleteMyStarsByQuestionSetID(questionSetId int) error {
+	if err := r.DB.Table("online_learning_my_stars").
+		Where("question_set_id = ?", questionSetId).
+		Delete(nil).Error; err != nil {
+		return err
+	}
+	return nil
+}
+func (r *GormRepository) DeleteMyQuestionsByQuestionSetID(questionSetId int) error {
+	if err := r.DB.Table("online_learning_my_questions").
+		Where("question_set_id = ?", questionSetId).
+		Delete(nil).Error; err != nil {
+		return err
+	}
+	return nil
 }

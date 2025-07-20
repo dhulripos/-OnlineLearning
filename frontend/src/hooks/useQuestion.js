@@ -8,9 +8,17 @@ export default function useQuestion(action) {
       return async (query) => {
         return getMyQuestionList(query, axios);
       };
+    case "getMyCreatedQuestionList":
+      return async (query) => {
+        return getMyCreatedQuestionList(query, axios);
+      };
     case "getQuestionSet":
       return async (questionSetId) => {
         return getQuestionSet(questionSetId, axios);
+      };
+    case "getQuestionSetForFix":
+      return async (questionSetId) => {
+        return getQuestionSetForFix(questionSetId, axios);
       };
     case "search":
       return async (searchQuery) => {
@@ -27,6 +35,10 @@ export default function useQuestion(action) {
     case "register my_questions":
       return async (data) => {
         return registerMyQuestions(data, axios);
+      };
+    case "fixQuestions":
+      return async (data) => {
+        return fixQuestions(data, axios);
       };
     case "submit":
       return async (data) => {
@@ -47,6 +59,10 @@ export default function useQuestion(action) {
     case "rating":
       return async (questionSetId) => {
         return rating(questionSetId, axios);
+      };
+    case "deleteQuestionSet":
+      return async (questionSetId) => {
+        return deleteQuestionSet(questionSetId, axios);
       };
     default:
       throw new Error("Invalid action");
@@ -106,10 +122,13 @@ async function getQuestionsByQuestionIds(ids, axios) {
   }
 }
 
-async function getMyQuestionList({ page, limit }, axios) {
+async function getMyQuestionList(
+  { title, status, genreId, page, limit },
+  axios
+) {
   try {
     const res = await axios.get(
-      `/GetMyQuestionList?page=${page}&limit=${limit}`
+      `/GetMyQuestionList?title=${title}&status=${status}&genreId=${genreId}&page=${page}&limit=${limit}`
     );
     return res.data;
   } catch (error) {
@@ -118,20 +137,22 @@ async function getMyQuestionList({ page, limit }, axios) {
   }
 }
 
-async function insertQuestion({ questions, title }, axios) {
+async function getMyCreatedQuestionList(
+  { title, visibility, genreId, page, limit },
+  axios
+) {
   try {
-    // console.log("Sending questions:", questions);
-    // console.log("Sending title:", title);
-
-    const res = await axios.post(`/InsertQuestion`, { title, questions });
-    return res;
+    const res = await axios.get(
+      `/GetMyCreatedQuestionList?title=${title}&visibility=${visibility}&genreId=${genreId}&page=${page}&limit=${limit}`
+    );
+    return res.data;
   } catch (error) {
-    // console.error("Error inserting questions:", error);
+    // console.log("Error getting MyQuestionList:", error);
     throw error;
   }
 }
 
-// 問題集詳細を取得
+// 問題集詳細を取得（問題詳細、問題回答用）
 async function getQuestionSet(questionSetId, axios) {
   try {
     const res = await axios.get(
@@ -194,13 +215,65 @@ async function addToFavorite({ questionSetId, isFavorite }, axios) {
 
 async function registerMyQuestions({ questionSetId, deadline }, axios) {
   try {
-    // console.log(questionSetId);
     const res = await axios.post(
       `/RegisterMyQuestions?question_set_id=${questionSetId}&deadline=${deadline}`
     );
     return res;
   } catch (error) {
     // console.error("Error registering my-questions", error);
+    throw error;
+  }
+}
+
+// 問題集詳細を取得（問題集修正用）
+async function getQuestionSetForFix(questionSetId, axios) {
+  try {
+    const res = await axios.get(
+      `GetQuestionSetForFix?question_set_id=${questionSetId}`
+    );
+    return res.data;
+  } catch (error) {
+    console.log("Error getting QuestionSet", error);
+    throw error;
+  }
+}
+
+async function insertQuestion({ questions, title }, axios) {
+  try {
+    const res = await axios.post(`/InsertQuestion`, { title, questions });
+    return res;
+  } catch (error) {
+    // console.error("Error inserting questions:", error);
+    throw error;
+  }
+}
+
+async function fixQuestions(
+  { questionSetId, title, genreId, questions },
+  axios
+) {
+  try {
+    const res = await axios.post(`/FixMyQuestions`, {
+      questionSetId,
+      title,
+      genreId,
+      questions,
+    });
+    return res;
+  } catch (error) {
+    // console.error("Error fixing my-questions", error);
+    throw error;
+  }
+}
+
+async function deleteQuestionSet(questionSetId, axios) {
+  try {
+    const res = await axios.post(
+      `/DeleteQuestionSet?question_set_id=${questionSetId}`
+    );
+    return res;
+  } catch (error) {
+    // console.error("Error fixing my-questions", error);
     throw error;
   }
 }

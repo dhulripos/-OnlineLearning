@@ -1,12 +1,19 @@
 import { useEffect, useState } from "react";
-import "../css/CreateQuestion.css";
+import "../css/FixQuestion.css";
 import useGenre from "../hooks/useGenre";
 import useQuestion from "../hooks/useQuestion";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import BackButton from "./BackButton";
 import LoadingMotion from "../utils/LoadingMotion";
+import { useParams, useNavigate } from "react-router-dom";
 
-export default function CreateQuestion() {
+export default function FixQuestion() {
+  const getQuestionSetForFix = useQuestion("getQuestionSetForFix");
+  const fixQuestions = useQuestion("fixQuestions");
+  const { id } = useParams();
+  const navigate = useNavigate();
+  // 更新が成功したら、遷移元の画面に戻したい
+
   const [visibility, setVisibility] = useState("private");
   const [genre, setGenre] = useState(1);
   const [title, setTitle] = useState(""); // 問題集のタイトルを管理
@@ -24,8 +31,66 @@ export default function CreateQuestion() {
   const [errors, setErrors] = useState({});
   const [successMessage, setSuccessMessage] = useState("");
   const getAllGenres = useGenre("all");
-  const insertQuestion = useQuestion("insert");
-  const [insertLoading, setInsertLoading] = useState(false);
+  const [updateLoading, setUpdateLoading] = useState(false);
+
+  // 問題集セットIDを元にデータを取得する
+  const {
+    data: questionSetData,
+    error,
+    isError,
+  } = useQuery({
+    queryKey: ["questions", { id }],
+    queryFn: () => getQuestionSetForFix(id),
+    retry: (failureCount, error) => {
+      // 403 や 404 は即失敗、それ以外は2回だけ再試行
+      if ([403, 404, 500, 401].includes(error?.response?.status)) return false;
+      return failureCount < 2;
+    },
+  });
+  // 問題集を修正しようとしているユーザーが作成者ではない場合
+  useEffect(() => {
+    if (
+      isError &&
+      (error?.status === 403 || error?.status === 401 || error?.status === 500)
+    ) {
+      alert("この問題集を修正する権限がありません。");
+      window.history.back();
+    }
+  }, [error, isError]);
+
+  // 更新用mutate
+  const { mutate: updateMutate } = useMutation({
+    mutationFn: (data) => fixQuestions(data),
+    onSuccess: (res) => {
+      if (res?.status === 200) {
+        setUpdateLoading(false);
+        navigate("/question/fix/search");
+      }
+    },
+    onError: (error) => {
+      setSuccessMessage("問題の更新に失敗しました");
+      setTimeout(() => setSuccessMessage(""), 5000);
+    },
+  });
+
+  useEffect(() => {
+    if (questionSetData) {
+      const loadedQuestions = questionSetData?.map((q) => ({
+        id: q?.id,
+        genreId: q?.genreId,
+        visibility: q?.visibility,
+        question: q?.question,
+        answer: q?.answer,
+        choices1: q?.choices1,
+        choices2: q?.choices2,
+      }));
+
+      setQuestions(loadedQuestions);
+      setTitle(questionSetData[0]?.title);
+      setGenre(loadedQuestions[0]?.genreId ?? 1);
+      setVisibility(loadedQuestions[0]?.visibility ?? "private");
+    }
+  }, [questionSetData]);
 
   // 公開範囲やジャンルが変更されたら、現在の `questions` に適用
   useEffect(() => {
@@ -52,6 +117,7 @@ export default function CreateQuestion() {
       ...questions,
       {
         id: Date.now(),
+        isNew: true, // 新規追加であることを明示
         genreId: Number(genre),
         visibility: visibility,
         question: "",
@@ -101,58 +167,24 @@ export default function CreateQuestion() {
     return Object.keys(newErrors).length === 0;
   };
 
-  // 問題の更新用関数
-  const { mutate: insertMutate } = useMutation({
-    mutationFn: (data) => insertQuestion(data),
-    onSuccess: (res) => {
-      // console.log(res);
-      // サーバーからのメッセージを取得
-      if (res.status === 200) {
-        setSuccessMessage("問題を作成しました (" + res.data.count + "件)");
-      } else {
-        setSuccessMessage("問題を作成しました");
-      }
-
-      // 5秒後にメッセージを消す
-      setTimeout(() => {
-        setSuccessMessage("");
-      }, 5000);
-
-      setTitle("");
-      setInsertLoading(false); // 送信中フラグをオフにする
-
-      // フォームをリセット
-      setQuestions([
-        {
-          id: Date.now(),
-          genreId: Number(genre),
-          visibility: visibility,
-          question: "",
-          answer: "",
-          choices1: "",
-          choices2: "",
-        },
-      ]);
-      setErrors({});
-    },
-    onError: (error) => {
-      // console.error("更新エラー:", error);
-    },
-  });
-
-  console.log("insertLoading:", insertLoading);
-
   // 作成ボタン押下時の処理
-  const handleCreate = () => {
+  const handleUpdate = () => {
     if (!validate()) return;
-    // if (insertLoading) return; // 二重送信防止
 
-    // 不要な `id` を削除して送信
-    const payload = questions.map(({ id, ...rest }) => rest);
-
-    const data = { questions: payload, title: title };
-    insertMutate(data);
-    setInsertLoading(true); // 送信中フラグをオンにする
+    const data = {
+      questionSetId: Number(id),
+      title: title,
+      genreId: genre,
+      questions: questions.map(({ isNew, ...q }) => {
+        if (isNew) {
+          const { id, ...rest } = q; // 新規はidを除外して送る
+          return rest;
+        }
+        return q; // 既存はid付きで送信
+      }),
+    };
+    updateMutate(data);
+    setUpdateLoading(true); // 送信中フラグをオンにする
   };
 
   const { data: genres, isLoading } = useQuery({
@@ -164,17 +196,17 @@ export default function CreateQuestion() {
     <div className="container">
       {/* 成功メッセージの表示 */}
       {successMessage && (
-        <div className="success-message">{successMessage}</div>
+        <div className="success-message-fix">{successMessage}</div>
       )}
       {/* タイトルと公開範囲の選択 */}
       <div className="header">
-        <h1>問題集作成</h1>
-        <div className="select-group">
+        <h1>問題集修正</h1>
+        <div className="select-group-fix">
           <label style={{ whiteSpace: "nowrap" }}>
             公開範囲とジャンルを選択：
           </label>
           <select
-            className="visibility-select"
+            className="visibility-select-fix"
             value={visibility}
             onChange={(e) => setVisibility(e.target.value)}
             style={{ width: "200px" }}
@@ -183,7 +215,7 @@ export default function CreateQuestion() {
             <option value="public">パブリック</option>
           </select>
           <select
-            className="genre-select"
+            className="genre-select-fix"
             value={Number(genre)}
             onChange={(e) => setGenre(Number(e.target.value))}
           >
@@ -201,7 +233,7 @@ export default function CreateQuestion() {
       </div>
 
       {/* 問題集 */}
-      <div className="question-title">
+      <div className="question-title-fix">
         <label style={{ whiteSpace: "nowrap" }}>問題集タイトル</label>
         <input
           style={{ marginLeft: "15px" }}
@@ -215,11 +247,14 @@ export default function CreateQuestion() {
         )}
       </div>
 
-      <div className="form-container">
+      <div className="form-container-fix">
         {questions.map((q) => (
-          <div key={q.id} className="question-set">
+          <div key={q.id} className="question-set-fix">
             {/* ×ボタン */}
-            <button className="delete-btn" onClick={() => removeQuestion(q.id)}>
+            <button
+              className="delete-btn-fix"
+              onClick={() => removeQuestion(q.id)}
+            >
               ×
             </button>
 
@@ -239,7 +274,7 @@ export default function CreateQuestion() {
             )}
 
             <label>答えと選択肢</label>
-            <div className="answer-group">
+            <div className="answer-group-fix">
               <input
                 type="text"
                 value={q.answer}
@@ -279,15 +314,15 @@ export default function CreateQuestion() {
           </div>
         ))}
 
-        <button className="add-btn" onClick={addQuestion}>
+        <button className="add-btn-fix" onClick={addQuestion}>
           ＋
         </button>
         <button
-          className="create-btn"
-          onClick={handleCreate}
-          disabled={insertLoading}
+          className="fix-btn"
+          onClick={handleUpdate}
+          disabled={updateLoading}
         >
-          {insertLoading ? <LoadingMotion /> : "作成"}
+          {updateLoading ? <LoadingMotion /> : "作成"}
         </button>
       </div>
 

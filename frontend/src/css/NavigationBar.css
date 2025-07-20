@@ -110,3 +110,9 @@ body {
   background: #f0f0f0;
   color: #7003ff;
 }
+
+/* NavigationBar.css */
+.nav-links button.active {
+  font-weight: bold;
+  text-decoration: underline;
+}

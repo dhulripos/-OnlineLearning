@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, Link, useLocation } from "react-router-dom";
 import "../css/NavigationBar.css";
 import logo from "../common/images/logo.png";
 import { useRecoilState } from "recoil";
@@ -8,7 +8,7 @@ import { authState } from "../recoils/authState";
 export default function NavigationBar() {
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
-
+  const location = useLocation();
   // Recoil
   const [userInfoRecoil, setUserInfoRecoil] = useRecoilState(authState);
 
@@ -27,18 +27,53 @@ export default function NavigationBar() {
         </Link>
       </div>
       <div className="nav-links">
-        <button onClick={() => navigate("/question/my-question-list")}>
+        <button
+          className={
+            location?.pathname === "/question/my-question-list" ? "active" : ""
+          }
+          onClick={() => navigate("/question/my-question-list")}
+        >
           マイ学習リスト
         </button>
-        <button onClick={() => navigate("/question/search")}>問題集検索</button>
-        <button onClick={() => navigate("/question/create")}>問題集作成</button>
+        <button
+          className={location?.pathname === "/question/search" ? "active" : ""}
+          onClick={() => navigate("/question/search")}
+        >
+          問題集検索
+        </button>
+        <button
+          className={location?.pathname === "/question/create" ? "active" : ""}
+          onClick={() => navigate("/question/create")}
+        >
+          問題集作成
+        </button>
+        <button
+          className={
+            location?.pathname === "/question/fix/search" ? "active" : ""
+          }
+          onClick={() => navigate("/question/fix/search")}
+        >
+          問題集修正
+        </button>
         <div className="user-menu">
-          <button className="user-name" onClick={toggleMenu}>
+          <button
+            className={
+              location?.pathname === "/userinfo/edit"
+                ? "active user-name"
+                : "user-name"
+            }
+            onClick={toggleMenu}
+          >
             {userInfoRecoil && userInfoRecoil?.user?.name}
           </button>
           {menuOpen && (
             <div className="dropdown">
-              <button onClick={() => navigate("/userinfo/edit")}>
+              <button
+                className={
+                  location?.pathname === "/userinfo/edit" ? "active" : ""
+                }
+                onClick={() => navigate("/userinfo/edit")}
+              >
                 ユーザー情報変更
               </button>
               <button onClick={() => navigate("/logout")}>ログアウト</button>

@@ -21,7 +21,7 @@ export default function QuestionDetails() {
   // 問題集セットIDを元にデータを取得する
   const { data: questions, isLoading } = useQuery({
     queryKey: ["questions", { id }],
-    queryFn: () => getQuestionSet(id),
+    queryFn: () => getQuestionSet(id, "details"),
   });
 
   const { mutate: submitRating } = useMutation({
@@ -46,6 +46,10 @@ export default function QuestionDetails() {
       // console.log("更新成功:", res);
       setErrorMessage(""); // エラーをクリア
       setSuccessMessage("✅ 更新が成功しました！");
+      // メッセージを5秒後に消す
+      setTimeout(() => {
+        setSuccessMessage("");
+      }, 5000);
       questions[0].isRegistered = true;
       setRating(0);
     },
@@ -252,6 +256,7 @@ export default function QuestionDetails() {
                 (e.target.style.background =
                   "linear-gradient(135deg, #32a1ce, #5bc0de)")
               }
+              disabled={isSubmitting}
             >
               マイ学習リストに追加
             </button>
