@@ -12,18 +12,76 @@
   border-radius: 8px;
   box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.1);
   min-height: 480px;
+  /* 以下を追加（スクロールエリアの高さ調整） */
+  max-height: 500px; /* 必要に応じて調整 */
   overflow-y: auto;
+  position: relative; /* stickyの基準にする */
 }
 
-.my-question-list-thead {
-  background: #98e9f7;
+.my-question-list-table {
+  table-layout: fixed; /* 必須 */
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.my-question-list-thead th {
+  /* position: sticky;
+  top: 0; */
+  background: #98e9f7; /* 背景色は上書きする */
+  /* z-index: 110; */
+  /* box-shadow: 0 2px 2px rgba(0, 0, 0, 0.05); 境目が分かるように */
 }
 
 /* テーブルのスタイル */
 .my-question-list-table {
+  table-layout: fixed;
   width: 100%;
   border-collapse: collapse;
   margin-top: 10px;
+}
+
+.my-question-list-td.title-cell {
+  white-space: nowrap; /* 折り返し防止 */
+  overflow: hidden; /* はみ出した部分を非表示 */
+  text-overflow: ellipsis; /* 省略記号（...）を表示 */
+  max-width: 400px; /* 必要に応じて調整 */
+}
+
+/* 各列ごとに幅指定 */
+.my-question-list-th.title,
+.my-question-list-td.title-cell {
+  width: 35%; /* タイトルは広く */
+  max-width: 0; /* flex防止用 */
+}
+
+.my-question-list-th {
+  font-size: 16px; /* 他の列と同じに統一（必要に応じて変更） */
+  font-weight: bold; /* 見出しを強調したくない場合 */
+}
+
+.my-question-list-th.genre,
+.my-question-list-td.genre-cell {
+  width: 10%;
+}
+
+.my-question-list-th.total,
+.my-question-list-td.total-cell {
+  width: 10%;
+}
+
+.my-question-list-th.progress,
+.my-question-list-td.progress-cell {
+  width: 15%;
+}
+
+.my-question-list-th.deadline,
+.my-question-list-td.deadline-cell {
+  width: 15%;
+}
+
+.my-question-list-th.status,
+.my-question-list-td.status-cell {
+  width: 10%;
 }
 
 .my-question-list-th,
@@ -31,6 +89,9 @@
   padding: 10px;
   text-align: left;
   border-bottom: 1px solid #ddd;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .my-question-list-tbody tr:hover {

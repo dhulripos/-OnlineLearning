@@ -134,14 +134,6 @@ export default function QuestionList() {
     }
   }, [questions]);
 
-  // useEffect(() => {
-  //   if (questionSearch) {
-  //     setTitle(questionSearch.title || "");
-  //     setVisibility(questionSearch.visibility || "public");
-  //     setGenreId(questionSearch.genreId || 1);
-  //   }
-  // }, [questionSearch]);
-
   // 詳細から戻ってきたとき用
   useEffect(() => {
     refetch();
@@ -274,14 +266,14 @@ export default function QuestionList() {
 
       {/* 検索結果 */}
       <div className="results-box">
-        <table>
-          <thead>
+        <table className="question-list-table">
+          <thead className="question-list-thead">
             <tr>
-              <th>問題集タイトル</th>
-              <th>ジャンル</th>
-              <th>総評価</th>
-              <th>平均評価</th>
-              <th>作成者</th>
+              <th className="question-list-th title">問題集タイトル</th>
+              <th className="question-list-th others">ジャンル</th>
+              <th className="question-list-th others">総評価</th>
+              <th className="question-list-th others">平均評価</th>
+              <th className="question-list-th others">作成者</th>
             </tr>
           </thead>
           <tbody>

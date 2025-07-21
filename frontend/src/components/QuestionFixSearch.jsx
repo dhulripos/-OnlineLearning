@@ -206,13 +206,13 @@ export default function MyQuestionList() {
         <table className="my-question-list-table">
           <thead className="my-question-list-thead">
             <tr>
-              <th className="my-question-list-th">問題集タイトル</th>
-              <th className="my-question-list-th">ジャンル</th>
-              <th className="my-question-list-th">公開範囲</th>
-              <th className="my-question-list-th">総問題数</th>
-              <th className="my-question-list-th">作成日</th>
-              <th className="my-question-list-th">更新日</th>
-              <th className="my-question-list-th"></th>
+              <th className="my-question-list-th title">問題集タイトル</th>
+              <th className="my-question-list-th genre">ジャンル</th>
+              <th className="my-question-list-th genre">公開範囲</th>
+              <th className="my-question-list-th genre">総問題数</th>
+              <th className="my-question-list-th genre">作成日</th>
+              <th className="my-question-list-th genre">更新日</th>
+              <th className="my-question-list-th genre"></th>
             </tr>
           </thead>
           <tbody className="my-question-list-tbody">
@@ -232,38 +232,39 @@ export default function MyQuestionList() {
 
                 return (
                   <tr key={questionSetId}>
-                    <td
-                      className="my-question-list-td"
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        position: "relative",
-                        gap: "16px", // 要素間のスペース
-                      }}
-                    >
-                      <Link to={`/question/fix/${questionSetId}`}>
+                    <td className="my-question-list-td title-cell">
+                      <Link
+                        to={`/question/set/${questionSetId}`}
+                        style={{
+                          display: "inline-block",
+                          width: "100%",
+                          overflow: "hidden",
+                          whiteSpace: "nowrap",
+                          textOverflow: "ellipsis",
+                        }}
+                      >
                         {question?.title}
                       </Link>
                     </td>
 
-                    <td className="my-question-list-td">
+                    <td className="my-question-list-td genre-cell">
                       {question?.genreName}
                     </td>
-                    <td className="my-question-list-td">
+                    <td className="my-question-list-td genre-cell">
                       {question?.visibility === "public"
                         ? "パブリック"
                         : "プライベート"}
                     </td>
-                    <td className="my-question-list-td">
+                    <td className="my-question-list-td genre-cell">
                       {question?.totalQuestions} 問
                     </td>
-                    <td className="my-question-list-td">
+                    <td className="my-question-list-td genre-cell">
                       {question?.createdAt &&
                         new Date(question?.createdAt).toLocaleDateString(
                           "ja-JP"
                         )}
                     </td>
-                    <td className="my-question-list-td">
+                    <td className="my-question-list-td genre-cell">
                       {question?.updatedAt &&
                         new Date(question?.updatedAt).toLocaleDateString(
                           "ja-JP"

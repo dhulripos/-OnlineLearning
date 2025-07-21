@@ -79,29 +79,11 @@
 }
 
 /* ヘッダー行を固定 */
-thead {
+.question-list-thead {
   /* position: sticky; */
   /* top: 0; */
   background: #f7e698;
   /* z-index: 100; */
-}
-
-/* テーブルのスタイル */
-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-top: 10px;
-}
-
-th,
-td {
-  padding: 10px;
-  text-align: left;
-  border-bottom: 1px solid #ddd;
-}
-
-tbody tr:hover {
-  background: #f1f1f1;
 }
 
 /* ページネーション */
@@ -128,4 +110,56 @@ tbody tr:hover {
 
 .pagination button:hover {
   background: #45a049;
+}
+
+.question-list-thead {
+  background: #efec8d;
+}
+
+/* テーブルのスタイル */
+.question-list-table {
+  table-layout: fixed;
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+}
+
+.question-list-td.title-cell {
+  white-space: nowrap; /* 折り返し防止 */
+  overflow: hidden; /* はみ出した部分を非表示 */
+  text-overflow: ellipsis; /* 省略記号（...）を表示 */
+  max-width: 400px; /* 必要に応じて調整 */
+}
+
+/* 各列ごとに幅指定 */
+.question-list-th.title,
+.question-list-td.title-cell {
+  width: 35%; /* タイトルは広く */
+  max-width: 0; /* flex防止用 */
+  font-size: 16px; /* 他の列と同じに統一（必要に応じて変更） */
+  font-weight: bold; /* 見出しを強調したくない場合 */
+}
+
+.question-list-th {
+  font-size: 16px; /* 他の列と同じに統一（必要に応じて変更） */
+  font-weight: bold; /* 見出しを強調したくない場合 */
+}
+
+.question-list-th.others,
+.question-list-td.others-cell {
+  width: 10%;
+}
+
+.question-list-th,
+.question-list-td {
+  padding: 10px;
+  text-align: left;
+  border-bottom: 1px solid #ddd;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.question-list-tbody tr:hover {
+  background: #f1f1f1;
 }

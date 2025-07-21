@@ -158,14 +158,14 @@ export default function MyQuestionList() {
         <table className="my-question-list-table">
           <thead className="my-question-list-thead">
             <tr>
-              <th className="my-question-list-th">問題集タイトル</th>
-              <th className="my-question-list-th">ジャンル</th>
-              <th className="my-question-list-th">総問題数</th>
+              <th className="my-question-list-th title">問題集タイトル</th>
+              <th className="my-question-list-th genre">ジャンル</th>
+              <th className="my-question-list-th total">総問題数</th>
               {/* <th className="my-question-list-th">正解数</th> */}
-              <th className="my-question-list-th">進捗率</th>
+              <th className="my-question-list-th progress">進捗率</th>
               {/* <th className="my-question-list-th">予定進捗率</th> */}
-              <th className="my-question-list-th">期限</th>
-              <th className="my-question-list-th">ステータス</th>
+              <th className="my-question-list-th deadline">期限</th>
+              <th className="my-question-list-th status">ステータス</th>
             </tr>
           </thead>
           <tbody className="my-question-list-tbody">
@@ -185,30 +185,31 @@ export default function MyQuestionList() {
 
                 return (
                   <tr key={questionSetId}>
-                    <td
-                      className="my-question-list-td"
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        position: "relative",
-                        gap: "16px", // 要素間のスペース
-                      }}
-                    >
-                      <Link to={`/question/set/${questionSetId}`}>
+                    <td className="my-question-list-td title-cell">
+                      <Link
+                        to={`/question/set/${questionSetId}`}
+                        style={{
+                          display: "inline-block",
+                          width: "100%",
+                          overflow: "hidden",
+                          whiteSpace: "nowrap",
+                          textOverflow: "ellipsis",
+                        }}
+                      >
                         {question?.title}
                       </Link>
                     </td>
 
-                    <td className="my-question-list-td">
+                    <td className="my-question-list-td genre-cell">
                       {question?.genreName}
                     </td>
-                    <td className="my-question-list-td">
+                    <td className="my-question-list-td total-cell">
                       {question?.totalQuestions} 問
                     </td>
                     {/* <td className="my-question-list-td">
                       {question?.answeredCount} 問
                     </td> */}
-                    <td className="my-question-list-td">
+                    <td className="my-question-list-td progress-cell">
                       <div className="progress-bar">
                         <div
                           className="progress-bar-fill"
@@ -223,10 +224,10 @@ export default function MyQuestionList() {
                     {/* <td className="my-question-list-td">
                       {question?.plannedProgress}
                     </td> */}
-                    <td className="my-question-list-td">
+                    <td className="my-question-list-td deadline-cell">
                       {new Date(question?.deadline).toISOString().split("T")[0]}
                     </td>
-                    <td className="my-question-list-td">
+                    <td className="my-question-list-td status-cell">
                       {{
                         not_started: "未着手",
                         in_progress: "進行中",
