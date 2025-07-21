@@ -3,7 +3,7 @@
 **Echo-Learning（通称：エコラン）** は、「反響」をテーマにした学習支援Webアプリケーションです。
 繰り返し問題集に取り組んだり、他のユーザーが作成した問題集に挑戦することで、知識や発見の「反響」が広がっていきます。
 
-🔗 アプリURL: [https://dhulripos-echo-learning.com](https://dhulripos-echo-learning.com)
+🔗 アプリURL: [https://dhulripos-echo-learning.com/login](https://dhulripos-echo-learning.com/login)
 ※ 現在も継続的に開発・改善中です。
 
 ---
