@@ -79,21 +79,37 @@ export default function CreateQuestion() {
     }
 
     questions.forEach((q) => {
-      // 必須チェック & 文字数制限
-      ["question", "answer", "choices1", "choices2"].forEach((field) => {
-        if (!q[field].trim()) newErrors[`${q.id}-${field}`] = "必須項目です";
-        if (q[field].length > 1000)
+      // 入力値のトリム済みを取得
+      const trimmedFields = {
+        question: q.question.trim(),
+        answer: q.answer.trim(),
+        choices1: q.choices1.trim(),
+        choices2: q.choices2.trim(),
+      };
+
+      // 必須項目チェック（いずれかが空なら1つだけ表示）
+      const emptyFields = Object.entries(trimmedFields).filter(
+        ([_, v]) => v === ""
+      );
+      if (emptyFields.length > 0) {
+        newErrors[`${q.id}-required`] = "すべての項目を入力してください";
+      }
+
+      // 文字数制限（1000文字超）
+      Object.entries(trimmedFields).forEach(([field, value]) => {
+        if (value.length > 1000) {
           newErrors[`${q.id}-${field}`] = "1000文字以内で入力してください";
+        }
       });
 
-      // 重複チェック
-      const choicesSet = new Set(
-        [q.answer, q.choices1, q.choices2].map((s) => s.trim())
-      );
+      // 重複チェック（選択肢と答え）
+      const choicesSet = new Set([
+        trimmedFields.answer,
+        trimmedFields.choices1,
+        trimmedFields.choices2,
+      ]);
       if (choicesSet.size !== 3) {
-        newErrors[`${q.id}-answer`] = "答えと選択肢が重複しています";
-        newErrors[`${q.id}-choices1`] = "答えと選択肢が重複しています";
-        newErrors[`${q.id}-choices2`] = "答えと選択肢が重複しています";
+        newErrors[`${q.id}-choices-duplicate`] = "答えと選択肢が重複しています";
       }
     });
 
@@ -251,7 +267,7 @@ export default function CreateQuestion() {
               />
               <input
                 type="text"
-                value={q.choices1} // 修正: `dummy1` → `choices1`
+                value={q.choices1}
                 onChange={(e) =>
                   handleInputChange(q.id, "choices1", e.target.value)
                 }
@@ -260,7 +276,7 @@ export default function CreateQuestion() {
               />
               <input
                 type="text"
-                value={q.choices2} // 修正: `dummy2` → `choices2`
+                value={q.choices2}
                 onChange={(e) =>
                   handleInputChange(q.id, "choices2", e.target.value)
                 }
@@ -268,6 +284,7 @@ export default function CreateQuestion() {
                 className={errors[`${q.id}-choices2`] ? "error" : ""}
               />
             </div>
+            {/* バリデーションメッセージ */}
             {["answer", "choices1", "choices2"].map(
               (field) =>
                 errors[`${q.id}-${field}`] && (
@@ -275,6 +292,14 @@ export default function CreateQuestion() {
                     {errors[`${q.id}-${field}`]}
                   </span>
                 )
+            )}
+            {errors[`${q.id}-required`] && (
+              <span className="error-text">{errors[`${q.id}-required`]}</span>
+            )}
+            {errors[`${q.id}-choices-duplicate`] && (
+              <span className="error-text">
+                {errors[`${q.id}-choices-duplicate`]}
+              </span>
             )}
           </div>
         ))}
